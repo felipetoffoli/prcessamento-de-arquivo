@@ -1,37 +1,57 @@
-from pypdf import PdfReader
+from pypdf import PdfWriter , PdfReader 
 from PIL import Image
 import io
 from bitstring import BitArray
 from pdf2image import  convert_from_bytes
+from uuid import uuid4
+import img2pdf
+import os
 
+# capiturando arquivo
 pdf_file = 'HelloWorld.pdf'
-pdf_reader = PdfReader(pdf_file)
+with io.open(pdf_file, 'rb') as file:
+    varbinary = file.read()
 
-bitstream = ''
-pdf_content = ''
-bytes_io = io.BytesIO(b'\x48\x65\x6C\x6C\x6F')
+# transformando em binary 01
+bitarray = BitArray(bytes=varbinary)
+bitstream = bitarray.bin
+print(f'BITSTREAM: {bitstream[0:60]}...', )
+
+pdf_reader = PdfReader(pdf_file)
+pdf_content= ''
 for page_num in range(len(pdf_reader.pages)):
     page = pdf_reader.pages[page_num]
     page_text = page.extract_text()
     pdf_content += page_text
     
-binary_data = bytes_io.getvalue()
-bitstream = BitArray(bytes=binary_data)
-with open('HelloWorld.text.txt', 'w') as file:
-    file.write(pdf_content)
-with open('HelloWorld.bitstram.txt', 'w') as file:
-    file.write(bitstream.bin)
-print("Imagem salva como 'HelloWorld.txt'")
+print('TEXTO PDF: ', pdf_content)
+# transformando binary 01 para arquvo novamente
+new_bitarray = BitArray(bin=bitstream)
 
+# salvando arquivo novamente
+# with io.open('HelloWorld2.pdf', 'wb') as file:
+#     file.write(new_bitarray.bytes)
 
-with io.open('HelloWorld.bitstram.txt', 'r') as file:
-    bitstream = BitArray(bin=file.read())
+images_from_bytes = convert_from_bytes(
+                new_bitarray.bytes,
+               # fmt="jpg",
+                jpegopt={"quality": 100, "progressive": True, "optimize": True},
+            )
 
-# Converter a sequência binária em bytes
-image_data = bitstream.tobytes()
+name_files = str(uuid4())
+for i, image in enumerate(images_from_bytes):
+    image.save(f'images/{name_files}_{i + 1}.png', 'PNG')
 
-images = convert_from_bytes(image_data, fmt="jpeg")
+diretorio_atual = os.getcwd()
+pasta_images = os.path.join(diretorio_atual, 'images')
+all_itens_folder = os.listdir(pasta_images)
+itens_foler = []
 
-
-
-print("Imagem salva como 'HelloWorld.jpg'")
+for item in all_itens_folder:
+    if item.startswith(name_files):
+        itens_foler.append(os.path.join(pasta_images, item))
+print(f'IMAGENS GERADAS: {itens_foler}')
+new_pdf_name = f"{name_files}.pdf"
+with open(new_pdf_name,"wb") as f:
+	f.write(img2pdf.convert(itens_foler))
+print(f"PDF CRIADO A PARTIR DAS IMAGENS: {new_pdf_name}")

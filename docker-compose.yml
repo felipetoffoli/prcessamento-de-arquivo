@@ -1,0 +1,9 @@
+version: '3'
+services:
+  process-file:
+    container_name: process-file
+    build:
+      context: .
+    volumes:
+      - .:/app
+    command: python /app/main.py
